@@ -54,3 +54,24 @@ taskQueueRunner.scheduleAsyncTask(new BSAsyncTask(plugin) {
 ### Misc
 If an async task is scheduled from a Thread that Bukkit.isPrimaryThread() returns false for, the task will run on the current thread.
 If a sync task is scheduled on a Thread that Bukkit.isPrimaryThread() returns true for, the task will run on the current thread (main thread).
+
+### Maven
+```
+<repository>
+    <name>Central Portal Snapshots</name>
+    <id>central-portal-snapshots</id>
+    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    <releases>
+        <enabled>false</enabled>
+    </releases>
+    <snapshots>
+        <enabled>true</enabled>
+    </snapshots>
+</repository>
+
+<dependency>
+    <groupId>com.tchristofferson</groupId>
+    <artifactId>BetterScheduler</artifactId>
+    <version>1.0-beta-SNAPSHOT</version>
+</dependency>
+```
