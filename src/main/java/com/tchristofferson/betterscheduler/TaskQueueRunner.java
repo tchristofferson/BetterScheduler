@@ -2,6 +2,7 @@ package com.tchristofferson.betterscheduler;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Collections;
@@ -56,6 +57,14 @@ public class TaskQueueRunner extends BukkitRunnable {
         }
     }
 
+    /**
+     * Schedule a task to run on the main thread of the server.
+     * Better version of {@link org.bukkit.scheduler.BukkitScheduler#callSyncMethod(Plugin, Callable)}.
+     * If already on the main thread, the callable will be run immediately on the current thread.
+     * @param callable The {@link BSCallable<T> }
+     * @return A {@link Future<T>} that will hold the returned object of the callable
+     * @param <T> The type of object you are expecting to get back
+     */
     public <T> Future<T> submitSyncTask(BSCallable<T> callable) {
         CompletableFuture<T> future = new CompletableFuture<>();
         callable.setFuture(future);
@@ -64,9 +73,11 @@ public class TaskQueueRunner extends BukkitRunnable {
             callable.call();
         } else {
             synchronized (executorService) {
+                //If executor service is shutdown, add the callable to the blocking queue.
+                    //Blocking queue callables will be run in the shutdown method
                 if (executorService.isShutdown()) {
                     blockingSyncCallableQueue.add(callable);
-                } else {
+                } else {//If executor service isn't shut down, add the task to queue to be run in next tick (handled by run() method)
                     syncCallableTaskQueue.add(callable);
                 }
             }
@@ -75,6 +86,13 @@ public class TaskQueueRunner extends BukkitRunnable {
         return future;
     }
 
+    /**
+     * Schedule an async task.
+     * Better version of {@link org.bukkit.scheduler.BukkitScheduler#runTaskAsynchronously(Plugin, Runnable)}.
+     * If the TaskQueueRunner is shut down, the task will be run immediately on the current thread.
+     * If not on the main thread, the task will be run immediately on the current thread.
+     * @param task The {@link BSAsyncTask}
+     */
     public void scheduleAsyncTask(BSAsyncTask task) {
         boolean runHere = false;
 
@@ -96,6 +114,11 @@ public class TaskQueueRunner extends BukkitRunnable {
             task.execute();
     }
 
+    /**
+     * This method is intended to run in {@link JavaPlugin#onDisable()}.
+     * This method will wait for tasks to complete in a blocking manner.
+     * It is not recommended to run this method if the server is not shutting down as it could lag the main thread depending on the tasks scheduled, if any.
+     */
     //Called when the plugin is disabled
     public void shutdown() {
         if (!Bukkit.isPrimaryThread())
@@ -105,16 +128,18 @@ public class TaskQueueRunner extends BukkitRunnable {
             executorService.shutdown();
         }
 
-        shutdownLatch.countDown();
+        shutdownLatch.countDown();//Only used for JUnit tests
         run();//Run any sync tasks that were scheduled before shutdown that haven't had the opportunity to run yet
         Thread mainThread = Thread.currentThread();
 
+        //Shutdown thread will wait for all tasks in progress to complete and then interrupt the main thread to stop waiting for new sync tasks to run
         Thread shutdownThread = new Thread(() -> {
             try {
                 while (true) {
                     BSAsyncTask task;
 
                     synchronized (inProgressAsyncTaskQueue) {
+                        //If no more tasks in progress break out of the while loop
                         if (inProgressAsyncTaskQueue.isEmpty())
                             break;
 
@@ -124,7 +149,7 @@ public class TaskQueueRunner extends BukkitRunnable {
                     try {
                         task.waitForCompletion();
                     } catch (InterruptedException e) {
-                        logger.severe("Shutdown thread interrupted while waiting for async task to complete. This may result in loss of money or items for players.");
+                        logger.warning("Shutdown thread interrupted while waiting for async task to complete.");
                     }
                 }
             } finally {
@@ -136,8 +161,9 @@ public class TaskQueueRunner extends BukkitRunnable {
         shutdownThread.start();
 
         try {
+            //Wait for any sync tasks scheduled by async tasks and run them
             blockingSyncCallableQueue.take().call();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException e) {//Shutdown thread will interrupt once all async tasks are complete
             logger.info("Main thread continued.");
         }
     }
