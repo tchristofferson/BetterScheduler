@@ -20,7 +20,7 @@ public class TaskQueueRunner extends BukkitRunnable {
 
     private final CountDownLatch shutdownLatch = new CountDownLatch(1);//Used for testing
     private final AtomicLong asyncRunIdGenerator = new AtomicLong(0);
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = getExecutorService();
 
     private final Queue<BSCallable<?>> syncCallableTaskQueue = new ConcurrentLinkedQueue<>();
     private final Map<Long, BSAsyncTask> inProgressAsyncTaskQueue = Collections.synchronizedMap(new HashMap<>());
@@ -165,6 +165,15 @@ public class TaskQueueRunner extends BukkitRunnable {
             blockingSyncCallableQueue.take().call();
         } catch (InterruptedException e) {//Shutdown thread will interrupt once all async tasks are complete
             logger.info("Main thread continued.");
+        }
+    }
+
+    //Will use virtual threads if available, else a cached thread pool
+    private ExecutorService getExecutorService() {
+        try {
+            return (ExecutorService) Executors.class.getMethod("newVirtualThreadPerTaskExecutor").invoke(null);
+        } catch (Exception e) {
+            return Executors.newCachedThreadPool();
         }
     }
 
