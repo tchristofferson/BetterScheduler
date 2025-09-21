@@ -30,7 +30,7 @@ public class TaskQueueRunnerTest {
             //Simulate scheduling sync thread from non-primary thread
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
 
-            BSCallable<Boolean> callable = new BSCallable<>() {
+            BSCallable<Boolean> callable = new BSCallable<Boolean>() {
                 @Override
                 protected Boolean execute() {
                     return true;
@@ -64,7 +64,7 @@ public class TaskQueueRunnerTest {
                     try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
                         bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
 
-                        future = taskQueueRunner.submitSyncTask(new BSCallable<>() {
+                        future = taskQueueRunner.submitSyncTask(new BSCallable<Boolean>() {
                             @Override
                             protected Boolean execute() throws InterruptedException {
                                 assertTrue(finishSyncTask.await(1, TimeUnit.SECONDS));
@@ -109,7 +109,7 @@ public class TaskQueueRunnerTest {
 
         try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            taskQueueRunner.submitSyncTask(new BSCallable<>() {
+            taskQueueRunner.submitSyncTask(new BSCallable<Boolean>() {
                 @Override
                 protected Boolean execute() {
                     return true;
