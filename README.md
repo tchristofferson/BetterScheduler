@@ -56,6 +56,20 @@ If an async task is scheduled from a Thread that Bukkit.isPrimaryThread() return
 If a sync task is scheduled on a Thread that Bukkit.isPrimaryThread() returns true for, the task will run on the current thread (main thread).
 
 ### Maven
+IMPORTANT:
+1. Create a GitHub classic token [here](https://github.com/settings/tokens) and check `read:packages`
+2. Create maven settings.xml file in ~/.m2, if you don't already, and add the credentials to it. It should look similar to this:
+```
+<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>{GITHUB_USERNAME}</username>
+      <password>{TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+```
 ```
 <repository>
     <id>better-scheduler-github</id>
