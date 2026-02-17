@@ -70,6 +70,7 @@ IMPORTANT:
   </servers>
 </settings>
 ```
+pom.xml:
 ```
 <repository>
     <id>better-scheduler-github</id>
