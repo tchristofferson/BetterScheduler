@@ -73,7 +73,7 @@ IMPORTANT:
 pom.xml:
 ```
 <repository>
-    <id>better-scheduler-github</id>
+    <id>github</id><!--Same id used in settings.xml-->
     <url>https://maven.pkg.github.com/tchristofferson/BetterScheduler</url>
     <snapshots>
         <enabled>true</enabled>
