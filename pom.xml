@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.tchristofferson</groupId>
-    <artifactId>BetterScheduler</artifactId>
-    <version>1.0-beta-SNAPSHOT</version>
+    <artifactId>better-scheduler</artifactId>
+    <version>1.0-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -42,16 +42,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.8.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                    <autoPublish>true</autoPublish>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 
@@ -82,5 +72,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>github-packages</id>
+            <name>GitHub tchristofferson Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/tchristofferson/BetterScheduler</url>
+        </repository>
+    </distributionManagement>
 
 </project>

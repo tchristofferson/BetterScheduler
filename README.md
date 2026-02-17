@@ -58,20 +58,16 @@ If a sync task is scheduled on a Thread that Bukkit.isPrimaryThread() returns tr
 ### Maven
 ```
 <repository>
-    <name>Central Portal Snapshots</name>
-    <id>central-portal-snapshots</id>
-    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-    <releases>
-        <enabled>false</enabled>
-    </releases>
+    <id>better-scheduler-github</id>
+    <url>https://maven.pkg.github.com/tchristofferson/BetterScheduler</url>
     <snapshots>
         <enabled>true</enabled>
     </snapshots>
 </repository>
 
 <dependency>
-    <groupId>com.tchristofferson</groupId>
-    <artifactId>BetterScheduler</artifactId>
-    <version>1.0-beta-SNAPSHOT</version>
+  <groupId>com.tchristofferson</groupId>
+  <artifactId>better-scheduler</artifactId>
+  <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
