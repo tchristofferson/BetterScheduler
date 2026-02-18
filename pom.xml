@@ -75,7 +75,7 @@
 
     <distributionManagement>
         <repository>
-            <id>github-packages</id>
+            <id>github</id>
             <name>GitHub tchristofferson Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/tchristofferson/BetterScheduler</url>
         </repository>
