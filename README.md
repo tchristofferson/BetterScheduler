@@ -8,7 +8,7 @@ BetterScheduler was created for the following scenario:
 With BetterScheduler you can think of tasks that schedule other tasks as part of a 'transaction' where the tasks are guarenteed to run as a chain.
 
 ### Setup
-```
+```java
 public class MyPlugin extends JavaPlugin {
     private TaskQueueRunner taskQueueRunner;
     
@@ -24,7 +24,7 @@ It is imperative in the onDisable method of your plugin you shut down the TaskQu
 If you don't do this, there is a possibility some sync tasks never run and async tasks hang without completing.
 This will wait for all tasks to be completed and WILL block the main thread if there are tasks in progress.
 Any plugins using this library should make it known that the onDisable should never run unless the server is shut down.
-```
+```java
 @Override
 public void onDisable() {
     taskQueueRunner.shutdown();
@@ -33,7 +33,7 @@ public void onDisable() {
 
 ### Samples
 Schedule an async task that schedules and waits for a sync task
-```
+```java
 taskQueueRunner.scheduleAsyncTask(new BSAsyncTask(plugin) {
     @Override
     public void run() throws Exception {
@@ -59,7 +59,7 @@ If a sync task is scheduled on a Thread that Bukkit.isPrimaryThread() returns tr
 IMPORTANT:
 1. Create a GitHub classic token [here](https://github.com/settings/tokens) and check `read:packages`
 2. Create maven settings.xml file in ~/.m2, if you don't already, and add the credentials to it. It should look similar to this:
-```
+```xml
 <settings>
   <servers>
     <server>
@@ -71,7 +71,7 @@ IMPORTANT:
 </settings>
 ```
 pom.xml:
-```
+```xml
 <repository>
     <id>github</id><!--Same id used in settings.xml-->
     <url>https://maven.pkg.github.com/tchristofferson/BetterScheduler</url>
