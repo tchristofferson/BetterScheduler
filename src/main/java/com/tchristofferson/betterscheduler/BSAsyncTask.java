@@ -2,7 +2,9 @@ package com.tchristofferson.betterscheduler;
 
 import org.bukkit.plugin.Plugin;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,7 +27,7 @@ public abstract class BSAsyncTask implements IBSTask {
         }
     }
 
-    void waitForCompletion() throws InterruptedException {
-        completionLatch.await();
+    boolean waitForCompletion(Duration timeout) throws InterruptedException {
+        return completionLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
 }

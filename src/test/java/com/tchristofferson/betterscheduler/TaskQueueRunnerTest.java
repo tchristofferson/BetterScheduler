@@ -8,6 +8,8 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
@@ -109,17 +111,63 @@ public class TaskQueueRunnerTest {
 
         try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
-            taskQueueRunner.submitSyncTask(new BSCallable<Boolean>() {
-                @Override
-                protected Boolean execute() {
-                    return true;
-                }
-            });
+
+            for (int i = 0; i < 3; i++) {
+                taskQueueRunner.submitSyncTask(new BSCallable<Boolean>() {
+                    @Override
+                    protected Boolean execute() {
+                        return true;
+                    }
+                });
+            }
 
             bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
             assertTrue(taskQueueRunner.hasSyncTasks());
             taskQueueRunner.shutdown();
             assertFalse(taskQueueRunner.hasSyncTasks());
+        }
+    }
+
+    @Test
+    public void testShutdownRunsAllSyncTasksScheduledAfterShutdown() {
+        final TaskQueueRunner taskQueueRunner = new TaskQueueRunner();
+
+        try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+
+            taskQueueRunner.scheduleAsyncTask(new BSAsyncTask(plugin) {
+                @Override
+                public void run() throws InterruptedException {
+                    try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
+                        bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+                        List<Future<Boolean>> futures = new ArrayList<>(3);
+
+                        //Wait for shutdown. Subsequent sync tasks will be put into a different queue that the main thread will run once added
+                        taskQueueRunner.waitForShutdown();
+                        //Submit 3 sync tasks
+                        for (int i = 0; i < 3; i++) {
+                            futures.add(taskQueueRunner.submitSyncTask(new BSCallable<Boolean>() {
+                                @Override
+                                protected Boolean execute() {
+                                    return true;
+                                }
+                            }));
+                        }
+
+                        for (Future<Boolean> future : futures) {
+                            future.get();
+                        }
+                    } catch (ExecutionException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
+
+        try (MockedStatic<Bukkit> bukkit = Mockito.mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+            taskQueueRunner.shutdown();
+            assertFalse(taskQueueRunner.hasSyncShutdownTasks());
         }
     }
 }

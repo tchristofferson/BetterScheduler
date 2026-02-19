@@ -5,11 +5,14 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,14 +31,22 @@ public class TaskQueueRunner extends BukkitRunnable {
     //Callables will be added to this queue only when the executor service is shutdown.
     private final BlockingQueue<BSCallable<?>> blockingSyncCallableQueue = new LinkedBlockingQueue<>();
 
+    private final Duration shutdownTimeout;
+
     public TaskQueueRunner(Plugin plugin) {
+        this(plugin, Duration.ofSeconds(10));
+    }
+
+    public TaskQueueRunner(Plugin plugin, Duration shutdownTimeout) {
         this.logger = plugin.getLogger();
+        this.shutdownTimeout = shutdownTimeout;
         runTaskTimer(plugin, 1, 1);
     }
 
     //Used for tests
     TaskQueueRunner() {
         this.logger = Logger.getLogger(getClass().getSimpleName());
+        this.shutdownTimeout = Duration.ofSeconds(1);
     }
 
     @Override
@@ -130,10 +141,14 @@ public class TaskQueueRunner extends BukkitRunnable {
 
         shutdownLatch.countDown();//Only used for JUnit tests
         run();//Run any sync tasks that were scheduled before shutdown that haven't had the opportunity to run yet
+        final AtomicBoolean interruptedByShutdownThread = new AtomicBoolean(false);
         Thread mainThread = Thread.currentThread();
 
         //Shutdown thread will wait for all tasks in progress to complete and then interrupt the main thread to stop waiting for new sync tasks to run
         Thread shutdownThread = new Thread(() -> {
+            final long start = System.currentTimeMillis();
+            boolean shutdownThreadInterrupted = false;
+
             try {
                 while (true) {
                     BSAsyncTask task;
@@ -146,14 +161,23 @@ public class TaskQueueRunner extends BukkitRunnable {
                         task = inProgressAsyncTaskQueue.values().iterator().next();
                     }
 
+                    boolean success;
+
                     try {
-                        task.waitForCompletion();
+                        success = task.waitForCompletion(shutdownTimeout.minus(System.currentTimeMillis() - start, ChronoUnit.MILLIS));
                     } catch (InterruptedException e) {
+                        success = false;
                         logger.warning("Shutdown thread interrupted while waiting for async task to complete.");
+                        shutdownThreadInterrupted = true;
+                        Thread.currentThread().interrupt();
                     }
+
+                    if (!success)
+                        break;
                 }
             } finally {
                 logger.info("Shutdown thread completed. Continuing main thread.");
+                interruptedByShutdownThread.set(!shutdownThreadInterrupted);
                 mainThread.interrupt();
             }
         });
@@ -161,10 +185,15 @@ public class TaskQueueRunner extends BukkitRunnable {
         shutdownThread.start();
 
         try {
+            //Loop will end when interrupted by the shutdown thread
             //Wait for any sync tasks scheduled by async tasks and run them
-            blockingSyncCallableQueue.take().call();
+            //noinspection InfiniteLoopStatement
+            while (true) blockingSyncCallableQueue.take().call();
         } catch (InterruptedException e) {//Shutdown thread will interrupt once all async tasks are complete
             logger.info("Main thread continued.");
+
+            if (!interruptedByShutdownThread.get())
+                Thread.currentThread().interrupt();
         }
     }
 
@@ -181,6 +210,10 @@ public class TaskQueueRunner extends BukkitRunnable {
 
     boolean hasSyncTasks() {
         return !syncCallableTaskQueue.isEmpty();
+    }
+
+    boolean hasSyncShutdownTasks() {
+        return !blockingSyncCallableQueue.isEmpty();
     }
 
     boolean hasInProgressAsyncTasks() {
